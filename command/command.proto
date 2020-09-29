@@ -18,6 +18,7 @@ message QueryCommand {
 	bool transaction = 2;
 	repeated string query = 3;
 	repeated Parameter value = 4;
+	bytes compressed_query = 5;
 }
 
 message ExecuteCommand {
