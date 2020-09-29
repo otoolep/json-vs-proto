@@ -1,0 +1,29 @@
+syntax = "proto3";
+package command;
+
+option go_package = "example.com/foo/bar";
+
+message Parameter {
+	oneof value {
+		sint64 i = 1;
+		float f = 2;
+		bool b = 3;
+		bytes bs = 4;
+		string s = 5;
+	}
+}
+
+message QueryCommand {
+	bool timings = 1;
+	bool transaction = 2;
+	repeated string query = 3;
+	repeated Parameter value = 4;
+}
+
+message ExecuteCommand {
+	bool timings = 1;
+	bool transaction = 2;
+	repeated string query = 3;
+	repeated Parameter value = 4;
+}
+
