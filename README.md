@@ -9,4 +9,4 @@ go install github.com/golang/protobuf/protoc-gen-go
 export SRC_DIR=/home/philip/repos/rqlite/src/github.com/rqlite/rqlite/store/proto
 export DEST_DIR=/home/philip/repos/rqlite/src/github.com/rqlite/rqlite/store/proto
 
-protoc -I=$SRC_DIR --go_out=$DEST_DIR $SRC_DIR/command.proto 
+protoc -I=$SRC_DIR --go_out=$DEST_DIR $SRC_DIR/command.proto
