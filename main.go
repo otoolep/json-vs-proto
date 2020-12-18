@@ -119,4 +119,93 @@ func main() {
 	fmt.Print(int(float64((jl-lcp))/float64(jl)*100), "% reduction moving from JSON to compressed marshalled Proto.\n")
 	fmt.Print(int(float64((jl-lbuf))/float64(jl)*100), "% reduction moving from JSON to compressed JSON.\n")
 	fmt.Print(int(float64((jl-jql))/float64(jl)*100), "% reduction moving from JSON to compressed JSON queries in Proto.\n")
+
+	fmt.Println("===========================")
+	fmt.Println("New model")
+	fmt.Println("===========================")
+
+        nmv := &command.Parameter{
+                Value: &command.Parameter_S{
+                        S: "fiona",
+                },
+        }
+
+	nms := &command.Statement{
+		Sql: "SELECT * FROM foo WHERE name=?",
+		Value: []*command.Parameter{nmv},
+	}
+
+	nmqc := &command.NewQueryCommand{
+		Statements: []*command.Statement{nms},
+	}
+
+	fmt.Println("Size of NewQueryCommand in JSON:", mustSizeofJSON(nmqc))
+	fmt.Println("Size of NewQueryCommand in Proto:", mustSizeofNewQueryProto(nmqc))
+
+        fmt.Println("===========================")
+        fmt.Println("New model multi")
+        fmt.Println("===========================")
+
+        nmv = &command.Parameter{
+                Value: &command.Parameter_S{
+                        S: "fiona",
+                },
+        }
+
+        nms = &command.Statement{
+                Sql: "SELECT * FROM foo WHERE name=?",
+                Value: []*command.Parameter{nmv},
+        }
+
+	nmss := make([]*command.Statement, 50)
+	for i := 0; i < 50; i++ {
+		nmss[i] = nms
+	}
+
+        nmqc = &command.NewQueryCommand{
+                Statements: nmss,
+        }
+
+	// Encode statements as JSON and then compress.
+        var nmsb bytes.Buffer
+        nmgz, err := gzip.NewWriterLevel(&nmsb, gzip.BestCompression)
+        if err != nil {
+                log.Fatal(err)
+        }
+        if err := json.NewEncoder(nmgz).Encode(nmss); err != nil {
+                log.Fatalf("failed to JSON encode and compress: %s", err.Error())
+        }
+        nmgz.Close()
+	nmqz := &command.NewQueryCommand{
+		CompressedStatements: nmsb.Bytes(),
+        }
+
+        fmt.Println("Size of NewQueryCommand in JSON:", mustSizeofJSON(nmqc))
+        fmt.Println("Size of NewQueryCommand in Proto:", mustSizeofNewQueryProto(nmqc))
+        fmt.Println("Size of NewQueryCommand in Proto, compressed:", mustSizeofNewQueryProto(nmqz))
+}
+
+func mustJSONMarshal(o interface{}) []byte {
+	b, err := json.Marshal(o)
+        if err != nil {
+                panic("failed to marshal JSON")
+        }
+	return b
+}
+
+func mustSizeofJSON(o interface{}) int {
+        b, err := json.Marshal(o)
+        if err != nil {
+                panic("failed to marshal JSON")
+        }
+
+	return len(b)
+}
+
+func mustSizeofNewQueryProto(c *command.NewQueryCommand) int {
+	b, err := proto.Marshal(c)
+        if err != nil {
+		panic("failed to marshal protobuf")
+        }
+	return len(b)
 }
