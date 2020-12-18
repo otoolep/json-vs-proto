@@ -124,14 +124,14 @@ func main() {
 	fmt.Println("New model")
 	fmt.Println("===========================")
 
-        nmv := &command.Parameter{
-                Value: &command.Parameter_S{
-                        S: "fiona",
-                },
-        }
+	nmv := &command.Parameter{
+		Value: &command.Parameter_S{
+			S: "fiona",
+		},
+	}
 
 	nms := &command.Statement{
-		Sql: "SELECT * FROM foo WHERE name=?",
+		Sql:   "SELECT * FROM foo WHERE name=?",
 		Value: []*command.Parameter{nmv},
 	}
 
@@ -142,70 +142,88 @@ func main() {
 	fmt.Println("Size of NewQueryCommand in JSON:", mustSizeofJSON(nmqc))
 	fmt.Println("Size of NewQueryCommand in Proto:", mustSizeofNewQueryProto(nmqc))
 
-        fmt.Println("===========================")
-        fmt.Println("New model multi")
-        fmt.Println("===========================")
+	fmt.Println("===========================")
+	fmt.Println("New model multi")
+	fmt.Println("===========================")
 
-        nmv = &command.Parameter{
-                Value: &command.Parameter_S{
-                        S: "fiona",
-                },
-        }
+	nmv = &command.Parameter{
+		Value: &command.Parameter_S{
+			S: "fiona",
+		},
+	}
 
-        nms = &command.Statement{
-                Sql: "SELECT * FROM foo WHERE name=?",
-                Value: []*command.Parameter{nmv},
-        }
+	nms = &command.Statement{
+		Sql:   "SELECT * FROM foo WHERE name=?",
+		Value: []*command.Parameter{nmv},
+	}
 
 	nmss := make([]*command.Statement, 50)
 	for i := 0; i < 50; i++ {
 		nmss[i] = nms
 	}
 
-        nmqc = &command.NewQueryCommand{
-                Statements: nmss,
-        }
+	nmqc = &command.NewQueryCommand{
+		Statements: nmss,
+	}
 
 	// Encode statements as JSON and then compress.
-        var nmsb bytes.Buffer
-        nmgz, err := gzip.NewWriterLevel(&nmsb, gzip.BestCompression)
-        if err != nil {
-                log.Fatal(err)
-        }
-        if err := json.NewEncoder(nmgz).Encode(nmss); err != nil {
-                log.Fatalf("failed to JSON encode and compress: %s", err.Error())
-        }
-        nmgz.Close()
+	var nmsb bytes.Buffer
+	nmgz, err := gzip.NewWriterLevel(&nmsb, gzip.BestCompression)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := json.NewEncoder(nmgz).Encode(nmss); err != nil {
+		log.Fatalf("failed to JSON encode and compress: %s", err.Error())
+	}
+	nmgz.Close()
 	nmqz := &command.NewQueryCommand{
 		CompressedStatements: nmsb.Bytes(),
-        }
+	}
 
-        fmt.Println("Size of NewQueryCommand in JSON:", mustSizeofJSON(nmqc))
-        fmt.Println("Size of NewQueryCommand in Proto:", mustSizeofNewQueryProto(nmqc))
-        fmt.Println("Size of NewQueryCommand in Proto, compressed:", mustSizeofNewQueryProto(nmqz))
+	fmt.Println("Size of NewQueryCommand in JSON:", mustSizeofJSON(nmqc))
+	fmt.Println("Size of NewQueryCommand in Proto:", mustSizeofNewQueryProto(nmqc))
+	fmt.Println("Size of NewQueryCommand in Proto, compressed statements:", mustSizeofNewQueryProto(nmqz))
+
+	fmt.Println("===========================")
+	fmt.Println("New model multi, proto marshal then compress whole thing")
+	fmt.Println("===========================")
+
+	nmsb.Reset()
+	nmgz.Reset(&nmsb)
+	nmgz.Write(mustProtobufMarshal(nmqc))
+	nmgz.Close()
+	fmt.Println("Size of NewQueryCommand in Proto, compressed statements:", len(nmsb.Bytes()))
 }
 
 func mustJSONMarshal(o interface{}) []byte {
 	b, err := json.Marshal(o)
-        if err != nil {
-                panic("failed to marshal JSON")
-        }
+	if err != nil {
+		panic("failed to marshal JSON")
+	}
+	return b
+}
+
+func mustProtobufMarshal(p *command.NewQueryCommand) []byte {
+	b, err := proto.Marshal(p)
+	if err != nil {
+		panic("failed to marshal")
+	}
 	return b
 }
 
 func mustSizeofJSON(o interface{}) int {
-        b, err := json.Marshal(o)
-        if err != nil {
-                panic("failed to marshal JSON")
-        }
+	b, err := json.Marshal(o)
+	if err != nil {
+		panic("failed to marshal JSON")
+	}
 
 	return len(b)
 }
 
 func mustSizeofNewQueryProto(c *command.NewQueryCommand) int {
 	b, err := proto.Marshal(c)
-        if err != nil {
+	if err != nil {
 		panic("failed to marshal protobuf")
-        }
+	}
 	return len(b)
 }
